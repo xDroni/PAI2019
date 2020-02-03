@@ -202,7 +202,11 @@ module.exports = function(url, req, rep, query, payload, session) {
             switch(req.method) {
               case 'POST':
                 if(!payload || !payload.email || !payload.password || !payload.passwordConfirmation) {
-                  lib.sendJSONWithError(rep, 401, 'Invalid credentials');
+                  lib.sendJSONWithError(rep, 401, 'Niepoprawne dane');
+                  return;
+                }
+                if(payload.password !== payload.passwordConfirmation) {
+                  lib.sendJSONWithError(rep, 401, 'Hasła się różnią');
                   return;
                 }
                   common.accounts.findOne({ email: payload.email }, {}, function(err, account) {
@@ -215,7 +219,9 @@ module.exports = function(url, req, rep, query, payload, session) {
                                       password: payload.password,
                                       accepted: null,
                                       date: new Date().getTime()
-                                  }).catch(err => console.log(err));
+                                  })
+                                      .then(() => lib.sendJSON(rep, {}))
+                                      .catch(err => console.log(err));
                               }
                               else {
                                   lib.sendJSONWithError(rep, 401, 'Wniosek o konto o tym adresie email został już złożony');
@@ -225,11 +231,6 @@ module.exports = function(url, req, rep, query, payload, session) {
                       else {
                           lib.sendJSONWithError(rep, 401, 'Konto o tym adresie email już istnieje');
                       }
-
-                      // common.sessions[session].accountNo = account._id;
-                      // common.sessions[session].email = account.email;
-                      // delete account.password;
-                      // lib.sendJSON(rep, account);
                   });
                 break;
 
@@ -243,6 +244,9 @@ module.exports = function(url, req, rep, query, payload, session) {
               case 'GET':
                 if(!common.sessions[session].accountNo) {
                   lib.sendJSONWithError(rep, 401, 'You are not logged in'); return;
+                }
+                if(!common.sessions[session].isMod) {
+                  lib.sendJSONWithError(rep, 401, 'You are not a moderator. Access denied'); return;
                 }
                 let skip = parseInt(query.skip);
                 let limit = parseInt(query.limit);
@@ -279,6 +283,9 @@ module.exports = function(url, req, rep, query, payload, session) {
             if(!common.sessions[session].accountNo) {
               lib.sendJSONWithError(rep, 401, 'You are not logged in'); return;
             }
+            if(!common.sessions[session].isMod) {
+              lib.sendJSONWithError(rep, 401, 'You are not a moderator. Access denied'); return;
+            }
             if(!payload.entry || !payload.entry.email || !payload.entry.password) {
               lib.sendJSONWithError(rep, 401, 'Invalid credentials');
               return;
@@ -301,7 +308,7 @@ module.exports = function(url, req, rep, query, payload, session) {
                   })
                   .catch(err => {
                     console.log(err);
-                    lib.sendJSONWithError(rep, 400, 'fsdfdsf');
+                    lib.sendJSONWithError(rep, 400, 'Error while accepting account');
                   });
               return;
             }
@@ -316,7 +323,7 @@ module.exports = function(url, req, rep, query, payload, session) {
                   }
               ).catch(err => {
                 console.error(err);
-                lib.sendJSONWithError(rep, 400, 'fdsfdsfdsf');
+                lib.sendJSONWithError(rep, 400, 'Error while rejecting account');
               });
               return;
             }
@@ -324,6 +331,9 @@ module.exports = function(url, req, rep, query, payload, session) {
           case 'DELETE':
             if(!common.sessions[session].accountNo) {
               lib.sendJSONWithError(rep, 401, 'You are not logged in'); return;
+            }
+            if(!common.sessions[session].isMod) {
+              lib.sendJSONWithError(rep, 401, 'You are not a moderator. Access denied'); return;
             }
             common.newAccounts.find().toArray(function(err, docs) {
               if(err)

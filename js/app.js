@@ -36,6 +36,7 @@ app.controller("loginDialog", [ '$http', '$uibModalInstance', 'globals', functio
                 $uibModalInstance.close(rep.data.email);
             },
             function(err) {
+                console.error(err);
                 ctrl.loginError = true;
             }
         );
@@ -47,19 +48,21 @@ app.controller("loginDialog", [ '$http', '$uibModalInstance', 'globals', functio
 
 }]);
 
-app.controller("createAccountDialog", [ '$http', '$uibModalInstance', function($http, $uibModalInstance) {
+app.controller("createAccountDialog", [ '$http', '$uibModalInstance', 'common', function($http, $uibModalInstance, common) {
     var ctrl = this;
     // devel: dla szybszego logowania
     ctrl.creds = { email: '', password: '', passwordConfirmation: '' };
-    ctrl.createAccountError = false;
+    ctrl.createAccountError = null;
 
     ctrl.tryCreateAccount = function() {
         $http.post('/createAccount', ctrl.creds).then(
-            function(rep) {
-                $uibModalInstance.close(rep.data.email);
+            function() {
+              $uibModalInstance.close();
+              common.showMessage('Wniosek złożony');
+
             },
             function(err) {
-                ctrl.createAccountError = true;
+                ctrl.createAccountError = err.data.error;
             }
         );
     };
@@ -78,8 +81,6 @@ app.controller('Menu', ['$http', '$rootScope', '$scope', '$location', '$uibModal
 
       var refreshMenu = function() {
             ctrl.menu = [];
-
-        console.log(globals);
 
             //moderator
             if(globals.isMod === true) {

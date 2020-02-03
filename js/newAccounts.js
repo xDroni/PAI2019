@@ -4,19 +4,24 @@ app.controller("NewAccounts", [ '$http', '$scope', 'globals', 'common', function
 
   var initVars = function() {
     ctrl.newAccountsCount = 0;
-    ctrl.limit = 5;
+    ctrl.limit = 20;
     ctrl.filter = 'Wszystkie';
   };
 
   initVars();
 
   ctrl.createAccount = function(entry) {
-    $http.post('/newAccounts', {entry, action: 'accept'}).then(() =>  ctrl.refreshAccounts() );
+    $http.post('/newAccounts', {entry, action: 'accept'}).then(() =>  {
+      ctrl.refreshAccounts();
+      common.showMessage('Konto utworzone');
+    });
   };
 
   ctrl.rejectAccount = function(entry) {
-    $http.post('/newAccounts', {entry, action: 'reject'}).then(() =>  ctrl.refreshAccounts() );
-
+    $http.post('/newAccounts', {entry, action: 'reject'}).then(() => {
+      ctrl.refreshAccounts();
+      common.showMessage('Konto odrzucone');
+    });
   };
 
   ctrl.refreshAccounts = function() {

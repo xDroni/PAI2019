@@ -6,15 +6,15 @@
 
   <div class="modal-body" id="modal-body">
     <label for="email">Email</label>
-    <input id="email" type="text" class="form-control" ng-model="ctrl.creds.email" required="true" ng-change="ctrl.createAccountError = false;"/>
+    <input id="email" type="text" class="form-control" ng-model="ctrl.creds.email" required="true" ng-change="ctrl.createAccountError = null;"/>
     <label for="password">Hasło</label>
-    <input id="password" type="password" class="form-control" ng-model="ctrl.creds.password" ng-change="ctrl.createAccountError = false;"/>
+    <input id="password" type="password" class="form-control" ng-model="ctrl.creds.password" ng-change="ctrl.createAccountError = null;"/>
     <label for="passwordConfirm">Powtórz hasło</label>
-    <input id="passwordConfirm" type="password" class="form-control" ng-model="ctrl.creds.passwordConfirmation" ng-change="ctrl.createAccountError = false;"/>
+    <input id="passwordConfirm" type="password" class="form-control" ng-model="ctrl.creds.passwordConfirmation" ng-change="ctrl.createAccountError = null;"/>
   </div>
 
   <div class="modal-footer">
-    <span style="float: left;" class="label label-warning" ng-if="ctrl.createAccountError">Błąd przy tworzeniu konta</span>
+    <span style="float: left;" class="label label-warning" ng-bind="ctrl.createAccountError === null ? '' : ctrl.createAccountError"></span>
     <button class="btn btn-success fa fa-sign-in" type="submit" ng-disabled="createAccountForm.$invalid" ng-click="ctrl.tryCreateAccount()"></button>
     <button class="btn btn-danger fa fa-times" type="button" ng-click="ctrl.cancel()"></button>
   </div>

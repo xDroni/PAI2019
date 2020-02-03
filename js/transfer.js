@@ -30,6 +30,7 @@ app.controller("Transfer", [ '$http', '$scope', '$uibModal', 'common', function(
                 initVars();
             },
             function (err) {
+                console.error(err);
                 common.showError('Przelew nieudany, czy odbiorca jest poprawny?');
             }
         );
