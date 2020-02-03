@@ -2,7 +2,8 @@ var app = angular.module("app", ['ngSanitize', 'ngRoute', 'ngAnimate', 'ngWebSoc
 
 // zmienne globalne
 app.value('globals', {
-    email: ''
+    email: '',
+    isMod: null
 });
 
 // nowe podstrony i ich kontrolery
@@ -10,7 +11,8 @@ app.constant('routes', [
 	{ route: '/', templateUrl: '/html/home.html', controller: 'Home', controllerAs: 'ctrl', menu: '<i class="fa fa-lg fa-home"></i>', guest: true },
 	{ route: '/transfer', templateUrl: '/html/transfer.html', controller: 'Transfer', controllerAs: 'ctrl', menu: 'Przelew' },
     { route: '/history', templateUrl: '/html/history.html', controller: 'History', controllerAs: 'ctrl', menu: 'Historia' },
-    { route: '/trend', templateUrl: '/html/trend.html', controller: 'Trend', controllerAs: 'ctrl', menu: 'Trend' }    
+    { route: '/trend', templateUrl: '/html/trend.html', controller: 'Trend', controllerAs: 'ctrl', menu: 'Trend' },
+    { route: '/newAccounts', templateUrl: '/html/newAccounts.html', controller: 'NewAccounts', controllerAs: 'ctrl', menu: 'Wnioski o konta', admin: true }
 ]);
 
 app.config(['$routeProvider', '$locationProvider', 'routes', function($routeProvider, $locationProvider, routes) {
@@ -21,7 +23,7 @@ app.config(['$routeProvider', '$locationProvider', 'routes', function($routeProv
 	$routeProvider.otherwise({ redirectTo: '/' });
 }]);
 
-app.controller("loginDialog", [ '$http', '$uibModalInstance', function($http, $uibModalInstance) {
+app.controller("loginDialog", [ '$http', '$uibModalInstance', 'globals', function($http, $uibModalInstance, globals) {
     var ctrl = this;
     // devel: dla szybszego logowania
     ctrl.creds = { email: 'jim@beam.com', password: 'admin1' };
@@ -30,6 +32,7 @@ app.controller("loginDialog", [ '$http', '$uibModalInstance', function($http, $u
     ctrl.tryLogin = function() {
         $http.post('/login', ctrl.creds).then(
             function(rep) {
+                globals.isMod = Boolean(rep.data.moderator);
                 $uibModalInstance.close(rep.data.email);
             },
             function(err) {
@@ -44,6 +47,28 @@ app.controller("loginDialog", [ '$http', '$uibModalInstance', function($http, $u
 
 }]);
 
+app.controller("createAccountDialog", [ '$http', '$uibModalInstance', function($http, $uibModalInstance) {
+    var ctrl = this;
+    // devel: dla szybszego logowania
+    ctrl.creds = { email: '', password: '', passwordConfirmation: '' };
+    ctrl.createAccountError = false;
+
+    ctrl.tryCreateAccount = function() {
+        $http.post('/createAccount', ctrl.creds).then(
+            function(rep) {
+                $uibModalInstance.close(rep.data.email);
+            },
+            function(err) {
+                ctrl.createAccountError = true;
+            }
+        );
+    };
+
+    ctrl.cancel = function() {
+        $uibModalInstance.dismiss('cancel');
+    };
+}]);
+
 app.controller('Menu', ['$http', '$rootScope', '$scope', '$location', '$uibModal', '$websocket', 'routes', 'globals', 'common',
 	function($http, $rootScope, $scope, $location, $uibModal, $websocket, routes, globals, common) {
         var ctrl = this;
@@ -51,18 +76,36 @@ app.controller('Menu', ['$http', '$rootScope', '$scope', '$location', '$uibModal
         ctrl.alert = common.alert;
         ctrl.menu = [];
 
-        var refreshMenu = function() {
+      var refreshMenu = function() {
             ctrl.menu = [];
-            for (var i in routes) {
+
+        console.log(globals);
+
+            //moderator
+            if(globals.isMod === true) {
+              for (let i in routes) {
                 if(routes[i].guest || globals.email) {
-                    ctrl.menu.push({route: routes[i].route, title: routes[i].menu});
+                  ctrl.menu.push({route: routes[i].route, title: routes[i].menu});
                 }
+              }
             }
+
+            //normal user
+            else {
+              for (let i in routes) {
+                if(routes[i].guest || globals.email) {
+                  if(routes[i].admin) continue;
+                  ctrl.menu.push({route: routes[i].route, title: routes[i].menu});
+                }
+              }
+            }
+
         };
 
         $http.get('/login').then(
             function(rep) { 
                 globals.email = rep.data.email;
+                globals.isMod = rep.data.isMod;
                 refreshMenu();
 
                 try {
@@ -106,6 +149,7 @@ app.controller('Menu', ['$http', '$rootScope', '$scope', '$location', '$uibModal
                         $http.delete('/login').then(
                             function(rep) {
                                 globals.email = null;
+                                globals.isMod = null;
                                 refreshMenu();
                                 $location.path('/');
                             },
@@ -129,6 +173,27 @@ app.controller('Menu', ['$http', '$rootScope', '$scope', '$location', '$uibModal
                         $location.path('/');
                     });
             }};
+
+        ctrl.createAccountIcon = function() {
+          return globals.email ? null : '<span class="fa fa-lg fa-user-plus"></span>';
+        }
+
+        ctrl.createAccount = function() {
+          var modalInstance = $uibModal.open({
+            animation: true,
+            ariaLabelledBy: 'modal-title-top',
+            ariaDescribedBy: 'modal-body-top',
+            templateUrl: '/html/createAccountDialog.html',
+            controller: 'createAccountDialog',
+            controllerAs: 'ctrl'
+          });
+          modalInstance.result.then(
+              function(data) {
+                globals.email = data;
+                refreshMenu();
+                $location.path('/');
+              });
+        };
 
         ctrl.closeAlert = function() { ctrl.alert.text = ""; };
 }]);

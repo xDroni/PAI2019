@@ -1,0 +1,22 @@
+<h3>Wnioski o konta</h3>
+Rekordów <span ng-bind="ctrl.newAccounts.length"></span> / <span ng-bind="ctrl.newAccountsCount"></span>
+<input class="form-inline" type="number" placeholder="Limit" ng-model="ctrl.limit" ng-change="ctrl.refreshAccounts()"/>
+<select ng-model="ctrl.filter" ng-options="x for x in options" ng-change="ctrl.refreshAccounts()"></select>
+
+<table class="table table-hover">
+  <tr>
+    <th>Data</th>
+    <th style="text-align: center;">Email</th>
+    <th style="text-align: center;">Status</th>
+    <th style="text-align: center;">Akcja</th>
+  </tr>
+  <tr ng-repeat="entry in ctrl.newAccounts">
+    <td ng-bind="ctrl.stamp2date(entry.date)"></td>
+    <td style="text-align: center;" ng-bind="entry.email"></td>
+    <td style="text-align: center;" ng-bind="entry.accepted === null ? 'oczekuje' : entry.accepted === true ? 'przyjęty' : 'odrzucony'"></td>
+    <td style="text-align: center;">
+      <button class="btn btn-success fa fa-check" type="button" ng-disabled="entry.accepted === true" ng-click="ctrl.createAccount(entry)"></button>
+      <button class="btn btn-danger fa fa-times" type="button" ng-disabled="!(entry.accepted === null)" ng-click="ctrl.rejectAccount(entry)"></button>
+    </td>
+  </tr>
+</table>

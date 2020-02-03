@@ -1,0 +1,22 @@
+<form name="createAccountForm">
+
+  <div class="modal-header">
+    <h3 class="modal-title" id="modal-title">Tworzenie konta</h3>
+  </div>
+
+  <div class="modal-body" id="modal-body">
+    <label for="email">Email</label>
+    <input id="email" type="text" class="form-control" ng-model="ctrl.creds.email" required="true" ng-change="ctrl.createAccountError = false;"/>
+    <label for="password">Hasło</label>
+    <input id="password" type="password" class="form-control" ng-model="ctrl.creds.password" ng-change="ctrl.createAccountError = false;"/>
+    <label for="passwordConfirm">Powtórz hasło</label>
+    <input id="passwordConfirm" type="password" class="form-control" ng-model="ctrl.creds.passwordConfirmation" ng-change="ctrl.createAccountError = false;"/>
+  </div>
+
+  <div class="modal-footer">
+    <span style="float: left;" class="label label-warning" ng-if="ctrl.createAccountError">Błąd przy tworzeniu konta</span>
+    <button class="btn btn-success fa fa-sign-in" type="submit" ng-disabled="createAccountForm.$invalid" ng-click="ctrl.tryCreateAccount()"></button>
+    <button class="btn btn-danger fa fa-times" type="button" ng-click="ctrl.cancel()"></button>
+  </div>
+
+</form>

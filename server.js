@@ -113,6 +113,7 @@ mongodb.MongoClient.connect(config.db, { useNewUrlParser: true, useUnifiedTopolo
     }
     var db = conn.db(config.dbName);
     common.accounts = db.collection('accounts');
+    common.newAccounts = db.collection('newAccounts');
     common.history = db.collection('history');
     console.log('Connection with ' + config.db + ' established');
     httpServer.listen(config.port);

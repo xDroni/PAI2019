@@ -20,7 +20,7 @@ module.exports = function(url, req, rep, query, payload, session) {
                         if(err) {
                             lib.sendJSONWithError(rep, 400, 'No such object'); return;
                         }
-                        delete account.password;                
+                        delete account.password;
                         lib.sendJSON(rep, account);
                     });
                     break;
@@ -28,7 +28,7 @@ module.exports = function(url, req, rep, query, payload, session) {
                     common.accounts.findOne({_id: common.sessions[session].accountNo}, {}, function(err, account) {
                         if(err) {
                             lib.sendJSONWithError(rep, 400, 'No such object'); return;
-                        }                
+                        }
                         if(isNaN(payload.amount) || payload.amount <= 0) {
                             lib.sendJSONWithError(rep, 400, 'Invalid operation data');
                         } else if(account.balance - payload.amount < account.limit) {
@@ -65,7 +65,7 @@ module.exports = function(url, req, rep, query, payload, session) {
                                                 balance: updated.value.balance,
                                                 balance_r: updated_r.value.balance,
                                                 description: payload.description
-                                            });        
+                                            });
                                             // message to recipient
                                             var message = { transfer: {
                                                 from: common.sessions[session].accountNo,
@@ -75,7 +75,7 @@ module.exports = function(url, req, rep, query, payload, session) {
                                             lib.sendDataToAccount(recipient_id, JSON.stringify(message));
                                         });
                                     delete updated.value.password;
-                                    lib.sendJSON(rep, updated.value);    
+                                    lib.sendJSON(rep, updated.value);
                                 });
                             });
                         }
@@ -109,13 +109,12 @@ module.exports = function(url, req, rep, query, payload, session) {
             switch(req.method) {
                 case 'GET':
                     if(!common.sessions[session].accountNo) {
-                        lib.sendJSONWithError(rep, 401, 'You are not logged in'); return;    
+                        lib.sendJSONWithError(rep, 401, 'You are not logged in'); return;
                     }
                     var skip = parseInt(query.skip);
                     var limit = parseInt(query.limit);
                     if(isNaN(skip) || isNaN(limit) || skip < 0 || limit <= 0) {
-                        lib.sendJSONWithError(rep, 400, 'Skip/limit errornous'); return;    
-                        return;
+                        lib.sendJSONWithError(rep, 400, 'Skip/limit errornous'); return;
                     }
                     var q = {$or: [{account: common.sessions[session].accountNo},{recipient_id: common.sessions[session].accountNo}]};
                     if(query.filter) {
@@ -142,7 +141,7 @@ module.exports = function(url, req, rep, query, payload, session) {
                     break;
                 case 'DELETE':
                     if(!common.sessions[session].accountNo) {
-                        lib.sendJSONWithError(rep, 401, 'You are not logged in'); return;    
+                        lib.sendJSONWithError(rep, 401, 'You are not logged in'); return;
                     }
                     common.history.aggregate([
                         {$match:{$or: [{account: common.sessions[session].accountNo},{recipient_id: common.sessions[session].accountNo}]}},
@@ -153,7 +152,7 @@ module.exports = function(url, req, rep, query, payload, session) {
                         {$count:'count'}
                     ]).toArray(function(err, docs) {
                         if(err || docs.length != 1)
-                            lib.sendJSONWithError(rep, 400, 'Cannot count objects in history'); 
+                            lib.sendJSONWithError(rep, 400, 'Cannot count objects in history');
                         else
                             lib.sendJSON(rep, docs[0]);
                     });
@@ -167,7 +166,8 @@ module.exports = function(url, req, rep, query, payload, session) {
                     var whoami = {
                         session: session,
                         accountNo: common.sessions[session].accountNo,
-                        email: common.sessions[session].email
+                        email: common.sessions[session].email,
+                        isMod: common.sessions[session].isMod,
                     };
                     lib.sendJSON(rep, whoami);
                     break;
@@ -183,6 +183,7 @@ module.exports = function(url, req, rep, query, payload, session) {
                         }
                         common.sessions[session].accountNo = account._id;
                         common.sessions[session].email = account.email;
+                        common.sessions[session].isMod = account.moderator;
                         delete account.password;
                         lib.sendJSON(rep, account);
                     });
@@ -196,6 +197,144 @@ module.exports = function(url, req, rep, query, payload, session) {
                     lib.sendJSONWithError(rep, 400, 'Invalid method ' + req.method + ' for ' + url);
             }
             break;
+
+          case '/createAccount':
+            switch(req.method) {
+              case 'POST':
+                if(!payload || !payload.email || !payload.password || !payload.passwordConfirmation) {
+                  lib.sendJSONWithError(rep, 401, 'Invalid credentials');
+                  return;
+                }
+                  common.accounts.findOne({ email: payload.email }, {}, function(err, account) {
+                      if(!account) {
+                          common.newAccounts.findOne({ email: payload.email }, {}, function(err, account) {
+                              if(!account) {
+                                  console.log('OK');
+                                  common.newAccounts.insertOne({
+                                      email: payload.email,
+                                      password: payload.password,
+                                      accepted: null,
+                                      date: new Date().getTime()
+                                  }).catch(err => console.log(err));
+                              }
+                              else {
+                                  lib.sendJSONWithError(rep, 401, 'Wniosek o konto o tym adresie email został już złożony');
+                              }
+                          })
+                      }
+                      else {
+                          lib.sendJSONWithError(rep, 401, 'Konto o tym adresie email już istnieje');
+                      }
+
+                      // common.sessions[session].accountNo = account._id;
+                      // common.sessions[session].email = account.email;
+                      // delete account.password;
+                      // lib.sendJSON(rep, account);
+                  });
+                break;
+
+            default:
+                lib.sendJSONWithError(rep, 400, 'Invalid method ' + req.method + ' for ' + url);
+            }
+            break;
+
+          case '/newAccounts':
+            switch(req.method) {
+              case 'GET':
+                if(!common.sessions[session].accountNo) {
+                  lib.sendJSONWithError(rep, 401, 'You are not logged in'); return;
+                }
+                let skip = parseInt(query.skip);
+                let limit = parseInt(query.limit);
+                if(isNaN(skip) || isNaN(limit) || skip < 0 || limit <= 0) {
+                  lib.sendJSONWithError(rep, 400, 'Skip/limit errornous'); return;
+                }
+                let q = query.filter;
+                if(q !== 'Wszystkie') {
+                  common.newAccounts.aggregate([
+                    {$match: {accepted: q === 'Oczekujące' ? null : q === 'Przyjęte' }},
+                    {$limit:limit}
+                  ]).toArray(function(err, entries) {
+                    if(err)
+                      lib.sendJSONWithError(rep, 400, 'New accounts retrieving failed');
+                    else {
+                      lib.sendJSON(rep, entries);
+                    }
+                  });
+                }
+                else {
+                  common.newAccounts.aggregate([
+                    {$limit:limit}
+                  ]).toArray(function(err, entries) {
+                    if(err)
+                      lib.sendJSONWithError(rep, 400, 'New accounts retrieving failed');
+                    else {
+                      lib.sendJSON(rep, entries);
+                    }
+                  });
+                }
+              break;
+
+          case 'POST':
+            if(!common.sessions[session].accountNo) {
+              lib.sendJSONWithError(rep, 401, 'You are not logged in'); return;
+            }
+            if(!payload.entry || !payload.entry.email || !payload.entry.password) {
+              lib.sendJSONWithError(rep, 401, 'Invalid credentials');
+              return;
+            }
+            if(payload.action === 'accept') {
+              common.accounts.insertOne({
+                email: payload.entry.email,
+                password: payload.entry.password
+              })
+                  .then(() => {
+                    common.newAccounts.updateOne(
+                        { "email": payload.entry.email },
+                        { "$set": { "accepted": true } }
+                    ).then(
+                        (res) => {
+                          console.log('Account accepted');
+                          lib.sendJSON(rep, {});
+                        }
+                    );
+                  })
+                  .catch(err => {
+                    console.log(err);
+                    lib.sendJSONWithError(rep, 400, 'fsdfdsf');
+                  });
+              return;
+            }
+            if(payload.action === 'reject') {
+              common.newAccounts.updateOne(
+                  { "email": payload.entry.email },
+                  { "$set": { "accepted": false } }
+              ).then(
+                  (res) => {
+                    console.log('Account rejected');
+                    lib.sendJSON(rep, {});
+                  }
+              ).catch(err => {
+                console.error(err);
+                lib.sendJSONWithError(rep, 400, 'fdsfdsfdsf');
+              });
+              return;
+            }
+            break;
+          case 'DELETE':
+            if(!common.sessions[session].accountNo) {
+              lib.sendJSONWithError(rep, 401, 'You are not logged in'); return;
+            }
+            common.newAccounts.find().toArray(function(err, docs) {
+              if(err)
+                lib.sendJSONWithError(rep, 400, 'Cannot count objects in newAccounts');
+              else {
+                lib.sendJSON(rep, docs);
+              }
+            });
+          break;
+        }
+        break;
 
         default:
             lib.sendJSONWithError(rep, 400, 'Invalid rest endpoint ' + url);

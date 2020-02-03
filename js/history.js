@@ -12,7 +12,7 @@ app.controller("History", [ '$http', '$scope', 'globals', 'common', function($ht
 
     ctrl.refreshHistory = function() {
         $http.delete('/history').then(
-            function(rep) { ctrl.historyCount = rep.data.count; },
+            function(rep) { console.log(rep);ctrl.historyCount = rep.data.count; },
             function(err) {}
         );
         var limit = ctrl.limit;
